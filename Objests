@@ -1,0 +1,30 @@
+import random
+
+class egg:
+    def __init__(self, loc_x, loc_y, color = None):
+        self.x_axis = loc_x
+        self.y_axis = loc_y
+               
+        color_dict = {
+            0 = "light blue"
+            1 = "light brown"
+            2 = "off white"
+            }
+        if color == None:
+            color_idx = random.randrange(len(color_dict))
+            self.color = color_dict[color_idx]
+        else:
+            self.color = color
+
+    def __str__(self):
+        return "A " + self.color + " egg at " + str(self.x_axis) + "," + str(self.y_axis)
+
+    def get_color(self):
+        return self.color
+
+    def get_loc(self):
+        return (self.x_axis, self.y_axis)
+
+    def change_loc(self, new_x, new_y):
+        self.x_axis = loc_x
+        self.y_axis = loc_y
