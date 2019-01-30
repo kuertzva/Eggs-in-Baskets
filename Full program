@@ -1,0 +1,322 @@
+"""
+Eggs in a Basket-
+
+This is a program to visualize the allocation of limited resources and
+assist in the making of decisions
+"""
+
+# imports
+import Tkinter as tk
+import random
+
+# Define classes
+
+class Egg:
+    def __init__(self, loc_x, loc_y, height, width, color = None, contained = False):
+        """
+        The egg is the unit representing the resource in question.
+
+        These will be generated in the carton object in an amount
+        determined by user input. These can be clicked and moved
+        to baskets with the mouse. If an egg is dropped in an invalid
+        location, it will be moved to it's last valid location.
+        """
+        self.x_axis = loc_x
+        self.y_axis = loc_y
+        self.height = height
+        self.width = width
+        self.contained = contained
+
+        color_dict = {
+            0 : "powder blue",
+            1 : "wheat1",
+            2 : "ghost white",
+            3 : "pale green",
+            }
+        if color == None:
+            color_idx = random.randrange(len(color_dict))
+            self.color = color_dict[color_idx]
+        else:
+            self.color = color
+
+    def __str__(self):
+        return "A " + self.color + " egg at " + str(self.x_axis) + "," + str(self.y_axis)
+
+    def get_color(self):
+        return self.color
+
+    def get_loc(self):
+        return (self.x_axis, self.y_axis)
+
+    def get_bbox(self):
+        """
+        For drawing egg and determining when egg has been clicked
+        """
+        
+        loc = self.get_loc()
+        bbox = [loc[0] - (self.width/2), loc[1] - (self.height/2),
+                loc[0] + (self.width/2), loc[1] + (self.height/2)]
+
+        return bbox
+
+    def get_width(self):
+        return self.width
+
+    def get_height(self):
+        return self.height
+
+    def change_loc(self, new_x, new_y):
+        self.x_axis = new_x
+        self.y_axis = new_y
+
+    def contain(self):
+        """
+        Record that this egg is in a basket
+        """
+        self.contained = True
+
+    def release(self):
+        """
+        Record that this egg is no longer in a basket
+        """
+        self.contained = False
+
+    def draw(self):
+        """
+        Should only draw when egg is not in basket, represented as a boolean value of
+        false        self.width = width
+
+        """
+        
+        w.create_oval(self.get_bbox(), fill = egg.get_color())
+
+
+class Basket:
+    def __init__(self, name, loc_x, loc_y, width, egg_list = []):
+        """
+        The basket is the container of decisioned eggs and represents
+        the dedication of the resource represented by the egg.
+
+        Eggs can be dropped in the basket by releasing the mouse button
+        over the basket while holding an egg. Eggs can be removed from
+        the basket by clicking and holding.
+
+        Don't put all of your eggs in one basket!
+        """
+
+        self.name = name
+        self.x_axis = loc_x
+        self.y_axis = loc_y
+        self.width = width
+        self.height = width / 2
+        self.egg_list = egg_list
+                
+    def __str__(self):
+        pass
+
+    def get_loc(self):
+        return (self.x_axis, self.y_axis)
+
+    def get_bbox(self):
+        """
+        For drawing and determining when eggs are dropped
+        """
+        
+        loc = self.get_loc()
+        bbox = [loc[0] - (self.width/2), loc[1] - (self.height/2),
+                loc[0] + (self.width/2), loc[1] + (self.height/2)]
+
+        return bbox
+
+    def get_egg_list(self):
+        """
+        Returns list of eggs within the basket
+        """
+        return self.egg_list
+
+    def take_egg(self, egg):
+        """
+        Adds egg to the basket
+        """
+        egg.contain()
+        self.egg_list.append(egg)
+        
+    def remove_egg(self):
+        """
+        Removes an egg to basket
+        """
+        
+        egg = egg_list.pop()
+        egg.release()
+        return egg
+
+    def draw(self):
+        """
+        Draws basket as well as the eggs contained therein
+        """
+
+        # draw the eggs
+        for 
+
+        # draw the basket
+        
+        pass
+
+    
+
+class Carton:
+    def __init__(n_eggs, egg_height, egg_width, canvas_height, canvas_width):
+        """
+        The carton is the container of available eggs.
+
+        This will generate the eggs upon initialization and put them
+        at evenly spaced locations. If an egg is dropped within a cell,
+        it will center itself therein.
+        """
+        self.egg_list = []
+        for egg in range(n_eggs):
+            self.egg_list.append(Egg(x, y, egg_height, egg_width))
+
+        self.cell_size = egg_height * 2
+        self.canvas_height = canvas_height
+        self.canvas_width = canvas_width
+        
+        if self.cell_size * n_eggs > canvas_width:
+            self.rows = (canvas_width // self.cell_side * n_eggs) + 1
+        else:
+            self.rows = 2
+        self.columns = (n_eggs // self.rows) + 1
+        self.height = self.rows * self.cell_size
+        self.width = self.columns * self.cell_size
+                                     
+    def __str__(self):
+        return "A carton of " + str(len(egg_list)) + " eggs."
+        
+
+    def get_egg_list(self):
+        return self.egg_list
+
+    def remove_egg(self, egg):
+        """
+        Removes egg from the egg list
+        """
+
+        self.egg_list.remove(egg)
+        
+    
+    def add_egg(self, egg):
+        """
+        Adds egg to the egg list
+        """
+
+        self.egg_list.append(egg)
+
+    def in_bounds(self, loc):
+        """
+        Determines whether a location is within the carton
+        """
+
+        if loc[1] > self.canvas_height - self.height:
+            if self.width / 2 < loc[0] < self.canvas_width - (self.width / 2):
+                return True
+
+        else:
+            return False
+
+    def find_cell(self, loc):
+        """"
+        Determinesm which cell is closest to input location.
+        """
+
+        pass    
+    
+    def draw(self):
+        """
+        Draws carton centered at bottom of canvas
+        """
+        
+        pass
+        
+# inputs
+
+#egg_number = input()
+
+# Define any global variables
+
+EGG_WIDTH = 0
+EGG_HEIGHT = 0
+CANVAS_WIDTH = 1000
+CANVAS_HEIGHT = 800
+FRAME_WIDTH = CANVAS_WIDTH * 1.25
+FRAME_HEIGHT = CANVAS_HEIGHT
+
+eggs = []
+baskets = []
+
+selected_egg = None
+
+# create frame and canvas
+
+# initialize carton
+
+carton = Carton(egg_number, EGG_WIDTH * 2, EGG_HEIGHT * 2)
+
+
+# event and button handlers
+
+def click(event):
+    """
+    Allows eggs to be selected.
+    """
+    
+    pass
+
+def drag(event):
+    """
+    Animates the movement of the egg as it is dragged from one location
+    to another.
+    """
+    
+    pass
+
+def release(event):
+    """
+    Initiates the deselction of an egg and activates the appropriate
+    function to put the egg in the appropriate location
+    """
+    
+    pass
+
+def add_basket(event):
+    """
+    Adds basket named after the text currently in the input box.
+    """
+
+    pass
+
+def remove_basket(event):
+    """
+    Removes a selected basket and moves contained eggs to the carton
+    """
+
+    pass
+
+# draw handler
+
+def draw():
+    """
+    Clears canvas, draws objects and recalls itself
+    """
+    for egg in eggs:
+        if not self.contained:
+            egg.draw()
+    for baskets in baskets:
+        basket.draw()
+    
+    pass
+
+# bindings
+
+# run
+
+tk.mainloop()
