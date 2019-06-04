@@ -1,114 +1,42 @@
+
 """
-This is a GUI fo the Eggs in Baskets program
+This is a GUI for the Eggs in Baskets program
 """
 
 import Tkinter as tk
+import random
+import math
 import sys
+
 sys.path.insert(0, "C:\Users\kuert\Desktop\programs\Eggs in Baskets")
-import objects
+import objects as obj
 
-# Variables
-master = tk.Tk()
-DIM = 400
-EGG_HEIGHT = 50
-EGG_WIDTH = 30
 
-#f = tk.Frame (master, width = DIM, height = DIM)
-#f.pack()
-w = tk.Canvas(master, width = DIM, height = DIM, background = "black")
-w.pack()
+# input variables
+DIM = 900
+EGG_HEIGHT = 30
+EGG_WIDTH = 20
 
-egg = objects.egg(200, 200)
-eggs = []
+# GUI object and return variables
+GUI = obj.E_n_B_GUI(DIM, DIM/4, (1500, 1350)
+                    , EGG_HEIGHT, EGG_WIDTH)
 
-eggs.append(egg)
+r = GUI.get_root()
+f = GUI.get_frame()
+w = GUI.get_canvas()
 
-selected_egg = None
+# Object handler and return variables
+E_in_B = obj.main_state(EGG_HEIGHT, EGG_WIDTH, GUI)
+E_in_B.create_carton()
 
-# helper functions
-def egg_bbox(egg):
-    """
-    Returns a bounding box for drawing eggs
-    """
-    
-    loc = egg.get_loc()
-    bbox = [loc[0] - (EGG_WIDTH/2), loc[1] - (EGG_HEIGHT/2),
-            loc[0] + (EGG_WIDTH/2), loc[1] + (EGG_HEIGHT/2)]
-    return bbox
+GUI.add_main_state(E_in_B)   
 
-def egg_click(egg, click):
-    """
-    Determines whether or not an egg has been selected
-    """
-    
-    bbox = egg_bbox(egg)
-    if bbox[0] < click[0] < bbox[2] and bbox[1] < click[1] < bbox[3]:
-        return True
-    else:
-        return False
+GUI.draw()
 
-# event handlers
 
-def click(event):
-    """
-    Allows for selection of egg
-    """
-    
-    global selected_egg
-    click_loc = (event.x, event.y)
-
-    for egg in eggs:
-        if egg_click(egg, click_loc):
-            selected_egg = egg
-
-def move_egg(event):
-    """
-    Allows for movement of selected egg
-    """
-    
-    global selected_egg
-    cursor_loc =(event.x, event.y)
-    if selected_egg != None:
-        selected_egg.change_loc(cursor_loc[0],
-                                cursor_loc[1])
-def drop_egg(event):
-    """
-    Allows for deselection of egg
-    """
-    
-    global selected_egg
-    if selected_egg != None:
-        selected_egg = None   
-
-def draw_eggs():
-    """
-    Draws individual eggs
-    """
-    
-    global eggs
-    for egg in eggs:
-        loc = egg.get_loc()
-        bbox = egg_bbox(egg)
-        w.create_oval(bbox, fill = egg.get_color())
-        
-
-def draw():
-    """
-    Draw handler
-    """
-    
-    w.delete("all")
-    draw_eggs()
-    w.after(2, draw)
-
-draw()
-
-# Bindings
-
-w.bind("<Button-1>", click)
-w.bind("<B1-Motion>", move_egg)
-w.bind("<ButtonRelease-1>", drop_egg)
+#w.bind("<Button-3>", individual_report)
 
 tk.mainloop()
+
 
     
