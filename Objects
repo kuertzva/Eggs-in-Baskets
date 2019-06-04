@@ -1,15 +1,35 @@
 import random
+import Tkinter as tk
+import math
 
-class egg:
-    def __init__(self, loc_x, loc_y, color = None):
+
+class Egg:
+    def __init__(self, loc_x, loc_y, height, width, canvas,
+                 color = None, contained = False):
+        """
+        The egg is the unit representing the resource in question.
+
+        These will be generated in the carton object in an amount
+        determined by user input. These can be clicked and moved
+        to baskets with the mouse. If an egg is dropped in an invalid
+        location, it will be moved to it's last valid location.
+        """
+
+        # initialize variables
         self.x_axis = loc_x
         self.y_axis = loc_y
-               
+        self.height = height
+        self.width = width
+        self.contained = False
+        self.w = canvas
+        
         color_dict = {
-            0 = "light blue"
-            1 = "light brown"
-            2 = "off white"
+            0 : "powder blue",
+            1 : "wheat1",
+            2 : "ghost white",
+            3 : "pale green",
             }
+        
         if color == None:
             color_idx = random.randrange(len(color_dict))
             self.color = color_dict[color_idx]
@@ -25,6 +45,1147 @@ class egg:
     def get_loc(self):
         return (self.x_axis, self.y_axis)
 
-    def change_loc(self, new_x, new_y):
+    def get_bbox(self):
+        """
+        Returns the bbox of egg
+        """
+        loc = self.get_loc()
+        bbox = [loc[0] - (self.width/2), loc[1] - (self.height/2),
+                     loc[0] + (self.width/2), loc[1] + (self.height/2)]
+        return bbox
+
+    def in_egg(self, loc):
+        """
+        Determines if an egg has been clicked
+        """
+        bbox = self.get_bbox()
+        if (bbox[0] < loc[0] < bbox[2]) and (bbox[1] < loc[1] < bbox[3]):
+            return True
+        else:
+            return False
+
+    def get_width(self):
+        return self.width
+
+    def get_height(self):
+        return self.height    
+
+    def move(self, new_x, new_y):
+        self.x_axis = new_x
+        self.y_axis = new_y
+
+    def contain(self):
+        """
+        Record that this egg is in a basket
+        """
+        self.contained = True
+
+    def release(self):
+        """
+        Record that this egg is no longer in a basket
+        """
+        self.contained = False
+        
+    def is_contained(self):
+        return self.contained
+
+    def draw(self):
+        """
+        Draws egg  
+        """
+        self.w.create_oval(self.get_bbox(),
+                           fill = self.color)
+
+
+
+class Basket:
+    def __init__(self, name, loc_x, loc_y, egg_width, canvas):
+        """
+        The basket is the container of decisioned eggs and represents
+        the dedication of the resource represented by the egg.
+
+        Eggs can be dropped in the basket by releasing the mouse button
+        over the basket while holding an egg. Eggs can be removed from
+        the basket by clicking and holding.
+
+        Don't put all of your eggs in one basket!
+        """
+
+        # basic details 
+        self.name = name
         self.x_axis = loc_x
         self.y_axis = loc_y
+        self.first_row = 6
+        self.egg_width = egg_width
+        self.max_eggs = sum(range(1, self.first_row + 1))
+        self.width = egg_width * self.first_row
+        self.height = self.width / 3
+        self.egg_list = []
+        self.w = canvas
+
+        # details for drawing basket 
+        loc = (self.x_axis, self.y_axis)
+        self.bbox = [loc[0] - (self.width/2), loc[1] - (self.height/2),
+                     loc[0] + (self.width/2), loc[1] + (self.height/2)]
+
+        # details for positioning eggs
+        self.start = self.bbox[0]
+        self.plane = self.bbox[1]
+                
+    def __str__(self):
+        name = str(self.name)
+        num = str(len(self.egg_list))
+        return "A basket named " + name + " containing " + num + " eggs"
+
+    def get_name(self):
+        return self.name
+
+    def get_loc(self):
+        return (self.x_axis, self.y_axis)
+
+    def get_width(self):
+        return self.width
+
+    def get_height(self):
+        return self.height
+
+    def in_basket(self, loc):
+        """
+        Determines whether the cursor is located within the basket
+        """
+        # within horizontal bounds
+        if self.bbox[0] < loc[0] < self.bbox[2]:
+            # within vertical bounds or directly above
+            if (self.bbox[1] - 15) < loc[1] < self.bbox[3]:
+                return True
+        return False
+
+    def get_egg_list(self):
+        """
+        Returns list of eggs within the basket (for computer use)
+        """
+        return self.egg_list
+
+    def get_egg_list_str(self):
+        """
+        Returns readable list of eggs within the basket (for debugging)
+        """
+        
+        return_list = []
+        for egg in self.egg_list:
+            return_list.append(str(egg))
+        return return_list
+
+    def add_egg(self, egg):
+        """
+        Adds egg to the basket
+        """
+
+        # add egg and list it as contained
+        egg.contain()
+        self.egg_list.append(egg)
+
+        # change_location of egg
+        egg_spot = (len(self.egg_list) - 1) % self.max_eggs
+        self.position_egg(egg, egg_spot)
+        
+    def remove_egg(self, egg = None):
+        """
+        Removes an egg from basket
+        """
+
+        if egg == None:
+            # determine there are eggs
+            if len(self.egg_list) == 0:
+                return None
+            egg = self.egg_list.pop()
+        else:
+            # determine egg valid
+            if egg in self.egg_list:
+                self.egg_list.remove(egg)
+            else:
+                #print "egg not in basket"
+                return None
+
+        egg.release()
+        return egg
+
+    def position_egg(self, egg, idx):
+        """
+        Changes the position of the egg in the basket so that
+        is drawn appropriately
+        """
+
+        # initialize variables                
+        row = 0
+        width = egg.get_width()
+
+        # determine what row the egg should be on
+        while idx >= self.first_row - row:
+            idx -= self.first_row - row 
+            row += 1
+
+        # determine location
+        row_offset = (width / 2) * (row + 1)
+        start = self.start + row_offset
+        new_x = start + (idx * width)
+        new_y = self.plane - ((row) * (egg.get_height() / 4))
+
+        # change location
+        egg.move(new_x, new_y)
+
+    def move(self, loc):
+        """
+        Moves the basket to a new location
+        """
+        # reset location
+        self.x_axis = loc[0]
+        self.y_axis = loc[1]
+        loc = (self.x_axis, self.y_axis)
+
+        # revise bbox accordingly
+        self.bbox = [loc[0] - (self.width/2), loc[1] - (self.height/2),
+                    loc[0] + (self.width/2), loc[1] + (self.height/2)]
+
+        # revise start and plane
+        self.start = self.bbox[0]
+        self.plane = self.bbox[1]
+
+        # reposition eggs
+        for egg in self.egg_list:
+            self.position_egg(egg, self.egg_list.index(egg))
+        
+    def destruct(self, carton, basket_list):
+        """
+        Deletes the basket and moves the eggs back to the carton
+        """
+        # initialize variable
+        egg_list = list(self.egg_list)
+
+        # add to carton
+        carton.add_eggs(egg_list)
+
+        # remove eggs
+        for egg in egg_list:
+            self.remove_egg(egg)
+
+        # make sure eggs removed, remove from global list
+        if len(self.egg_list) != 0:
+            print "error"
+            
+    def draw(self):
+        """
+        Draws basket as well as the eggs contained therein
+        """
+
+        # draw the eggs
+        draw_list = list(self.egg_list)
+        draw_list.reverse()
+        
+        for egg in draw_list:
+            egg.draw()
+
+        # draw the basket
+        bbox = self.bbox
+        self.w.create_rectangle(bbox, fill = "brown")
+
+        # display name
+        self.w.create_text((bbox[0] + bbox[2]) /2,
+                      (bbox[1] + bbox[3]) / 2,
+                      text= self.name, fill = "white")
+
+        # display length of contents
+        self.w.create_text((bbox[0] + bbox[2]) /2,
+                      (bbox[1] + bbox[3]) / 2 + self.height/2,
+                      text= len(self.egg_list), fill = "white")
+
+class Carton:
+    def __init__(self, n_eggs, egg_height, egg_width, canvas_height,
+                 canvas_width, canvas):
+        """
+        The carton is the container of available eggs.
+
+        This will generate the eggs upon initialization and put them
+        at evenly spaced locations. If an egg is dropped within a cell,
+        it will center itself therein.
+        """
+
+        print n_eggs
+        #initialize variables
+        self.egg_list = []
+        self.cell_size = egg_height * 2
+        self.canvas_height = canvas_height
+        self.canvas_width = canvas_width
+        self.w = canvas
+        
+        # rough estimate of rows
+        self.rows = ((self.cell_size * n_eggs) //
+                      self.canvas_width)
+        
+        # add another row if there is overflow
+        if (self.cell_size * n_eggs) % self.canvas_width != 0:
+            self.rows += 1
+            
+        # rough estimate of columns    
+        self.columns = (n_eggs // self.rows)
+
+        # add another column if there is overflow        
+        if n_eggs > self.rows * self.columns:    
+            self.columns += + 1
+
+        # create dimensions for carton            
+        self.height = self.rows * self.cell_size
+        self.width = self.columns * self.cell_size
+
+        self.left = (self.canvas_width - self.width) / 2
+        self.right = self.width + self.left
+        self.top = self.canvas_height - self.height
+        self.bottom = self.canvas_height
+        self.bbox = [self.left, self.top,
+                self.right, self.bottom]
+
+        # add eggs
+        col = 0
+        row = 0
+        
+        for n in range(n_eggs):
+            x = self.left + (self.cell_size / 2) + (col * self.cell_size)
+            y = self.bottom - (self.cell_size/ 2) - (row * self.cell_size)
+            new_egg = Egg(x, y, egg_height, egg_width, self.w)
+            self.egg_list.append(new_egg)
+            if col == self.columns - 1:
+                row += 1
+                col = 0
+            else:
+                col += 1
+                
+    def __str__(self):
+        return "A carton of " + str(len(self.egg_list)) + " eggs."
+
+    def get_height(self):
+        return self.height
+        
+
+    def get_egg_list(self):
+        return self.egg_list
+
+    def remove_egg(self, egg):
+        """
+        Removes egg from the egg list
+        """
+        
+        self.egg_list.remove(egg)
+
+    def add_eggs(self, eggs):
+        """
+        Adds egg to the egg list and positions them if appropiate
+        """
+        
+        self.egg_list.extend(eggs)
+        row = 0
+        col = 0
+
+        # for moving eggs from deleted baskets
+        for egg in eggs:
+            if not self.in_bounds(egg.get_loc()):
+
+                # find location
+                available = self.is_empty(row, col)
+            
+                while not available:
+                
+                    # iterate over columns
+                    for i in range(row + 1, self.columns):
+                        col = i
+                        available = self.is_empty(row, col)
+                        if available:
+                            break
+                    
+                    # iterate over rows
+                    else:
+                        row +=1
+                        col = 0
+                        available = self.is_empty(row, col)
+
+                # move egg
+                new_x = int((col + .5) * self.cell_size + self.left)
+                new_y = int((row + .5) * self.cell_size + self.top)
+                # print "egg loc: " + str(new_x) + str(new_y)
+
+                egg.move(new_x, new_y)
+
+    def in_bounds(self, loc):
+        """
+        Determines whether a location is within the carton
+        """
+
+        # test for pass        
+        if loc[1] > self.canvas_height - self.height:
+            if self.left < loc[0] < self.right:
+                return True
+
+        return False
+
+    def center_egg(self, egg):
+        """
+        Centers egg within nearest cell
+        """
+        # initialize variables
+        egg_loc = egg.get_loc()
+        egg_loc = (egg_loc[0] - self.left, egg_loc[1] - self.top)
+
+        # determine row and column
+        row = egg_loc[1] / self.cell_size
+        col = egg_loc[0] / self.cell_size
+
+        # determine if cell is available
+        available = self.is_empty(row, col)
+
+        # find closest available cell
+        radius = 1
+        x_test = []
+        y_test = []
+        rows = []
+        cols = []
+        potential_locs = []
+
+        while not available:
+            
+            # determine testing space
+            x_test = range(row - radius, row + radius + 1)          
+            y_test = range(col - radius, col + radius + 1)
+            
+
+            # find potential locations within testing space
+            rows = []
+            cols = []
+            for x in x_test:
+                for i in range(len(x_test)):
+                    rows.append(x)
+
+            for n in range(len(x_test)):
+                for y in y_test:
+                    cols.append(y)
+
+            # create list of untested cells within space
+            prior = set(potential_locs)
+            potential_locs = list(set(zip(rows, cols)).difference(prior))
+            #print potential_locs
+
+            # test for availibility
+            for loc in potential_locs:
+                if self.is_empty(loc[0],loc[1]):
+                    row = loc[0]
+                    col = loc[1]
+                    available = self.is_empty(row, col)
+                    #print "FOUND"
+                    break
+                
+            # increase testing space if none found
+            radius += 1 
+
+        # determine new coordinates
+        new_x = int(self.left + ((col + .5) * self.cell_size))
+        new_y = int(self.top + ((row + .5) * self.cell_size))
+
+        # debugging readouts
+        # print "left " + str(self.left)
+        # print "col " + str(col + .5)
+        # print "cell size " + str(self.cell_size)
+        # print "top " + str(self.top)
+        # print "row " + str(row + .5)
+        # print "coordinates: " + str(new_x) + "," + str(new_y)
+        # print "contained: " + str(egg.is_contained())
+
+        # center
+        egg.move(new_x, new_y)
+        self.add_eggs([egg])
+
+    def is_empty(self, row, col):
+        """
+        returns whether or not a cell is empty
+        """
+        # initialize variables
+        center = (int(self.left + (self.cell_size * (col + .5))),
+                  int(self.top + (self.cell_size * (row + .5))))
+
+        # check that rows and columns valid
+        if not 0 <= row < self.rows:
+            # print "Row break: " + str(row)
+            return False
+
+        if not 0 <= col < self.columns:
+            # print "Col break: " + str(col)
+            return False
+
+        # test for egg in cell
+        for egg in self.egg_list:
+            if egg.in_egg(center):
+                # print "cell taken!" + str(row) + str(col)
+                return False
+
+        # return True if all tests pass
+        return True
+
+    def draw(self):
+        """
+        Draws carton centered at bottom of canvas
+        """
+
+        # create carton
+        self.w.create_rectangle(self.bbox, fill = "yellow")
+
+        #row lines
+        latitude = self.canvas_height
+        for row in range(self.rows):
+            latitude -= self.cell_size
+            self.w.create_line(self.left, latitude,
+                          self.right, latitude)
+
+        #column lines
+        longitude = self.right
+        while longitude > self.left:
+            longitude -= self.cell_size
+            self.w.create_line(longitude, self.top,
+                          longitude, self.bottom)
+
+
+
+
+# Not revised from test gui
+class init_dialog(tk.Toplevel):
+    
+    def __init__(self, parent, main_state):
+
+        self.main_state = main_state
+        
+        tk.Toplevel.__init__(self, parent)
+        self.transient(parent)
+
+        self.title("Welcome to Eggs in Baskets")
+
+        self.parent = parent
+
+        self.result = None
+
+        body = tk.Frame(self)
+        self.initial_focus = self.body(body)
+        body.pack()
+
+        self.buttonbox()
+
+        self.grab_set()
+
+        if not self.initial_focus:
+            self.initial_focus = self
+
+        self.protocol("WM_DELETE_WINDOW", self.cancel)
+
+        self.geometry("+%d+%d" % (parent.winfo_rootx()+50,
+                                  parent.winfo_rooty()+50))
+
+        self.initial_focus.focus_set()
+
+        self.wait_window(self)
+
+    def body(self, master):
+        tk.Label(master, text="How many eggs:").grid()
+        self.egg_num = tk.Entry(master)
+        self.egg_num.grid()
+
+    def buttonbox(self):
+
+        #OK = tk.Button(box, text = "OK", width=10, command =self.ok,default="active")
+        #w.pack(side="left", padx=5, pady=5)
+        self.bind("<Return>", self.ok)
+
+    def apply(self):
+        if self.validate():
+            if self.egg_num.get() != "":
+                print 
+                self.main_state.set_num_eggs(int(self.egg_num.get()))
+    
+    def ok(self, dummie):
+        if not self.validate():
+            # put focus back
+            self.initial_focus.focus_set() 
+            return
+
+        self.withdraw()
+        self.update_idletasks()
+        self.apply()
+
+        #print self.apply()
+
+        self.cancel()
+
+    def cancel(self, event=None):
+        self.parent.focus_set()
+        self.destroy()
+
+    def validate(self):
+        try:
+            self.result = int(self.egg_num.get())
+            return True
+        except ValueError:
+            tk.MessageBox.showwarning(
+                "Egg num must be an integer"
+            )
+
+class main_state:
+    def __init__(self, egg_height, egg_width, GUI,
+                 basket_list = [], egg_list = []):
+        """
+        This manages the components of the program for passing information
+        to the GUI
+        """
+
+        self.num_eggs = 12
+        self.width = GUI.get_dim("c")[0]
+        self.height = GUI.get_dim("c")[1]
+        self.egg_height = egg_height
+        self.egg_width = egg_width
+        self.canvas = GUI.get_canvas()
+        self.basket_list = basket_list
+        self.egg_list = egg_list
+        self.carton = None
+        self.selected_egg = None
+        self.egg_prior_loc =  None
+        self.mid_point = (0,0)
+        self.GUI = GUI
+
+        d = init_dialog(self.canvas, self)
+
+        self.carton = None
+
+    def set_num_eggs(self, num):
+        print "set egg_num: " + str(num)
+        self.num_eggs = num
+
+    def create_carton(self):
+
+        print "num eggs: " + str(self.num_eggs)
+
+        if self.carton != None:
+            return "carton error: only 1 carton"
+
+        self.carton = Carton(self.num_eggs, self.egg_height,
+                             self.egg_width, self.height,
+                             self.width, self.canvas)
+
+        self.add_eggs(self.carton.get_egg_list())
+
+        self.mid_point = (self.width / 2,
+                          (self.height - self.carton.get_height()) / 2)
+
+    def get_selected_egg(self):
+        """
+        Retrieve the selected egg
+        """
+        return (self.selected_egg, self.egg_prior_loc)
+
+    def change_selected_egg(self, egg):
+        """
+        Change seleted egg
+        """
+        if egg == None:
+            self.egg_prior_loc = None
+
+        else:
+            self.egg_prior_loc = egg.get_loc()
+        
+        self.selected_egg = egg
+
+    def position_baskets(self):
+        """
+        repositions all the baskets in a formation whenever
+        the number of baskets changes
+
+        Width in the context below means how many baskets could
+        fit in the row.
+
+        Contents is how many baskets are in the row
+        """
+        
+        num = len(self.basket_list)
+        
+        # verify positioning is necessary
+        if not num > 1:
+            return None
+
+        # initialize variables
+        mid_width = int(math.ceil(math.sqrt(num)))
+        capacity = sum(range(mid_width)) + sum(range(mid_width + 1))
+
+        # create a list outlining width of each row when complete
+
+        # determine contents of middle row
+        if num == capacity or num == capacity - 2:
+            row_totals = [mid_width]
+        else:
+            row_totals = [2]
+
+        # iterate until all baskets are accounted for in row_totals
+        # adds row to beginning and end of list to account for symetry
+        baskets_left = num - row_totals[0]
+
+        # accounts for 2 rows
+        if baskets_left == mid_width and row_totals [0] == mid_width:
+            row_totals.append(mid_width)
+            baskets_left -= mid_width
+
+        center_dist = 1
+
+        while baskets_left > 0:
+            
+            # determine maximum number of baskets for row
+            max_width = mid_width - center_dist
+
+            # even case
+            if baskets_left % 2 ==0:
+                
+                # determine if more than 2 rows needed
+                if baskets_left <= max_width * 2:
+                    left = baskets_left / 2
+                    right = baskets_left / 2
+
+                else:
+                    # determine whether row should fill out or just have
+                    # edges. The four is to account for the 2 rows of 2
+                    if baskets_left - 4 < sum(range(max_width)) * 2:
+                        left = 2
+                        right = 2
+                    else:
+                        left = max_width
+                        right = max_width
+
+            else:
+                # determine if more than 2 rows needed
+                if baskets_left <= max_width * 2:
+                    half = baskets_left / 2.0
+                    left = int(math.ceil(half))
+                    right = baskets_left - left
+
+                else:
+                    # -1 is to make it bottom heavy
+                    left = max_width - 1
+                    right = max_width
+
+            row_totals.insert(0, min(left, right))
+            row_totals.append(max(left,right))
+            baskets_left -= left + right
+            center_dist += 1
+
+        # clean up row_totals by removing empty rows and making bottom heavy
+        if 0 in row_totals:
+            row_totals.remove(0)
+
+        first = int(row_totals[0])
+        last = int(row_totals[-1])
+
+        if first > last:
+            row_totals[0] = last
+            row_totals[-1] = first
+
+        # number of rows and space between them
+        rows = len(row_totals)
+        vert_offset = (self.mid_point[1] * 2) / (rows + 1)
+
+        # begin relocating baskets
+
+        left_basket = 0
+        mid_row = round(rows / 2.0) - 1
+
+        for row in range(rows):
+            
+            # initialize variables
+            row_total = row_totals[row]
+            width = int(mid_width - abs(row - mid_row)) + 1
+            
+            # ensure row will fit baskets
+            if row_total + 1  > width or row_total == 1:
+                width = row_total + 1
+            
+            y = vert_offset * (row + 1)
+            hort_offset = self.width / width
+            right_basket = left_basket + row_total
+
+            # unfilled row
+            if row_total == 2:
+                self.basket_list[left_basket].move((hort_offset, y))
+                self.basket_list[right_basket - 1].move((self.width - hort_offset, y))
+
+            else:
+                for idx in range(left_basket, right_basket):
+                    # find x coordinate
+                    x = hort_offset * (idx - left_basket + 1)
+                    self.basket_list[idx].move((x,y))
+
+            left_basket += row_total
+
+# indexing methods
+    def add_basket(self):
+
+        # initialize variables
+        name = self.GUI.get_basket_name()
+        num = len(self.basket_list)
+
+        # check that basket has name
+        if name == "":
+            return
+
+        new_basket = Basket(name, self.mid_point[0], self.mid_point[1],
+                                self.egg_width, self.GUI.get_canvas())
+
+        self.basket_list.append(new_basket)
+
+        self.position_baskets()
+
+    def remove_basket(self, basket):
+        
+        self.basket_list.remove(basket)
+        basket.destruct(self.carton, self.basket_list)
+
+        # Reposition
+        if len(self.basket_list) == 1:
+            basket_list[0].move(self.mid_point)
+
+        else:
+            self.position_baskets()
+        
+    def add_eggs(self, eggs):
+        self.egg_list.extend(eggs)
+
+    def add_carton(self, carton):
+        if self.carton != None:
+            print "Cannot have 2 cartons"
+        else:
+            self.carton = carton
+            self.add_eggs(carton.get_egg_list())
+
+    def get_baskets(self):
+        return self.basket_list
+
+    def get_carton(self):
+        return self.carton
+
+    def get_eggs(self):
+        return self.egg_list
+
+class E_n_B_GUI:
+    def __init__(self, C_DIM, F_DIM, T_DIM,
+                 egg_h, egg_w, background = "black"):
+
+
+        """
+        Garbage code follows. However, arranging things this way is a
+        stop gap, so there is no reason to find a clean implementation.
+        """
+        
+        if type(C_DIM) == tuple or type(C_DIM) == list:
+            self.c_width = C_DIM[0]
+            self.c_height = C_DIM[1]
+        elif type(C_DIM) == int:
+            self.c_width = C_DIM
+            self.c_height = C_DIM
+        else:
+            print "Error: Canvas dimension type invalid"
+
+        if type(F_DIM) == tuple or type(F_DIM) == list:
+            self.f_width = F_DIM[0]
+            self.f_height = F_DIM[1]
+        elif type(F_DIM) == int:
+            self.f_width = F_DIM
+            self.f_height = F_DIM
+        else:
+            print "Error: Frame dimension type invalid"
+
+        if type(T_DIM) == tuple or type(T_DIM) == list:
+            self.t_width = T_DIM[0]
+            self.t_height = T_DIM[1]
+        elif type(F_DIM) == int:
+            self.t_width = T_DIM
+            self.t_height = T_DIM
+        else:
+            print "Error: Root dimension type invalid"
+
+        print self.t_width, self.t_height
+ 
+        # create root
+        self.master = tk.Tk()
+        self.master.title("Baskets!")
+        geo_string = "{width}x{height}".format(width = str(self.t_width),
+                                               height = str(self.t_width))
+        self.master.geometry(geo_string)
+
+        # create frame
+
+        self.f = tk.Frame(self.master, width = self.f_width)
+        self.f.pack(anchor="w")
+
+        # create canvas
+
+        self.c = tk.Canvas(self.master, width = self.c_width,
+                           height = self.c_height, background = background)
+        self.c.pack(anchor="e")
+
+        # variable for main_state
+        self.ENB = None
+
+        # create ebtry add and button
+        self.basket_name = tk.Entry(self.f)
+        self.basket_name.pack(anchor = "nw")
+        add_basket = tk.Button(self.f, text="Add Basket", command = self.add_basket)
+        add_basket.pack(anchor = "nw")
+
+
+        # bindings
+
+        self.c.bind("<Button-1>", self.click_press)
+        self.c.bind("<B1-Motion>", self.click_hold)
+        self.c.bind("<ButtonRelease-1>", self.click_release)
+        self.c.bind("<Return>", self.report)
+        self.c.bind("<Shift-Button-1>", self.basket_deleter)
+        self.c.bind("<Button-3>", self.individual_report)
+        
+    # Getters
+    def get_frame(self):
+        return self.f
+    
+    def get_canvas(self):
+        return self.c
+
+    def get_root(self):
+        return self.master
+
+    def get_dim(self, string):
+        if string == "c":
+            return (self.c_width, self.c_height)
+        if string == "f":
+            return (self.f_width, self.f_height)
+        if string == "t":
+            return (self.t_width, self.t_height)
+        print "Error: No dimension specifier"
+        
+        return None
+
+    def get_basket_name(self):
+
+        name = str(self.basket_name.get())
+        self.basket_name.delete(0, "end")
+        return name        
+
+    # Variable modification
+    def add_main_state(self, ENB):
+        if self.ENB == None:
+            self.ENB = ENB
+
+        else:
+            print "Error: cannot change main_state"
+
+    # Event handlers
+    def click_press(self, event):
+        """
+        Allows for selection of egg
+        """
+
+        # verify there is a main state object affiliated with GUI
+        if self.ENB == None:
+            print "Error: No main state"
+            return None
+
+        # set variables
+        carton = self.ENB.get_carton()
+        eggs= self.ENB.get_eggs()
+        baskets = self.ENB.get_baskets()
+        click_loc = (event.x, event.y)
+
+        # reset
+        self.ENB.change_selected_egg(None)
+        self.c.focus_set()
+
+        # check eggs
+        for egg in eggs:
+            if not egg.contained and egg.in_egg(click_loc):
+                self.ENB.change_selected_egg(egg)
+                if egg in carton.get_egg_list():
+                    carton.remove_egg(egg)
+
+        # check baskets
+        for basket in baskets:
+            if basket.in_basket(click_loc):
+                egg = basket.remove_egg()
+                if egg != None:
+                    self.ENB.change_selected_egg(egg)
+
+    def click_hold(self, event):
+        """
+        Allows for movement of selected egg
+        """
+
+        # verify there is a main state object affiliated with GUI
+        if self.ENB == None:
+            print "Error: No main state"
+            return None
+
+        # set variables
+        cursor_loc =(event.x, event.y)
+        selected_egg = self.ENB.get_selected_egg()[0]
+
+        # move if egg has been selected
+        if selected_egg != None:
+            selected_egg.move(cursor_loc[0],
+                              cursor_loc[1])
+
+    def click_release(self, event):
+        """
+        Allows for deselection of egg
+        """
+
+        # verify there is a main state object affiliated with GUI
+        if self.ENB == None:
+            print "Error: No main state"
+            return None
+
+        # set variables
+        drop_loc = (event.x, event.y)
+        selected_egg = self.ENB.get_selected_egg()[0]
+        egg_prior_loc = self.ENB.get_selected_egg()[1]
+        baskets = self.ENB.get_baskets()
+        eggs = self.ENB.get_eggs()
+        carton = self.ENB.get_carton()
+
+        # if there is a selected egg
+        if selected_egg != None:
+            # check for baskets and deposit if so
+            for basket in baskets:
+                if basket.in_basket(drop_loc):
+                    basket.add_egg(selected_egg)
+                    basket_loc = basket.get_loc()
+                    self.ENB.change_selected_egg(None)
+                    break
+
+            else:      
+                # check if in carton and deposit if so
+                if carton.in_bounds(drop_loc):
+                    carton.center_egg(selected_egg)
+                    self.ENB.change_selected_egg(None)
+
+                # return egg to carton cell if not a valid drop point
+                elif type(egg_prior_loc) == tuple:
+                    print egg_prior_loc
+                    selected_egg.move(egg_prior_loc[0],
+                                      egg_prior_loc[1])
+
+                # return egg to basket if not a valid drop point
+                else:
+                    print egg_prior_loc
+                    egg_prior_loc.add_egg(selected_egg)
+                    selected_egg = None
+                    egg_prior_loc = None
+
+    def report(self, event):
+
+        # verify there is a main state object affiliated with GUI
+        if self.ENB == None:
+            print "Error: No main state"
+            return None
+            
+        print "Report: "
+        baskets = self.ENB.get_baskets()
+        for basket in baskets:
+            print basket.get_name
+            print basket.get_egg_list_str()
+            print len(basket.get_egg_list())
+
+    def basket_deleter(self, event):
+
+        # verify there is a main state object affiliated with GUI
+        if self.ENB == None:
+            print "Error: No main state"
+            return None
+        
+        click_loc = (event.x, event.y)
+        for basket in self.ENB.get_baskets():
+            if basket.in_basket(click_loc):
+                self.ENB.remove_basket(basket)
+
+    def individual_report(self, event):
+
+        # verify there is a main state object affiliated with GUI
+        if self.ENB == None:
+            print "Error: No main state"
+            return None
+
+        
+        doub_loc = (event.x, event.y)
+        baskets = self.ENB.get_baskets()
+        carton = self.ENB.get_carton()
+        
+        for basket in baskets:
+            if basket.in_basket(doub_loc):
+                print basket.get_name()
+                print basket.get_egg_list()
+                print len(basket.get_egg_list())
+            
+        if carton.in_bounds(doub_loc):
+            print carton
+
+        print E_in_B.get_eggs()
+
+    # button handler
+
+    def add_basket(self):
+        
+        # verify there is a main state object affiliated with GUI
+        if self.ENB == None:
+            print "Error: No main state"
+            return None
+
+        self.ENB.add_basket()
+        
+
+
+    # draw handler
+    def draw(self):
+        """
+        Draws all components of the GUI
+        """
+
+        # verify there is a main state object affiliated with GUI
+        if self.ENB == None:
+            print "Error: No main state"
+            return None
+
+        # set variables
+        eggs = self.ENB.get_eggs()
+        baskets = self.ENB.get_baskets()
+        carton = self.ENB.get_carton()
+        selected_egg = self.ENB.get_selected_egg()[0]
+        
+        # reset
+        self.c.delete("all")
+
+        # draw objects
+
+        self.ENB.get_carton().draw()
+
+        for egg in eggs:
+            if not egg.is_contained():
+                egg.draw()
+
+        for basket in baskets:
+            basket.draw()
+
+        # write selected egg
+        self.c.create_text(self.c_width, 20, fill="white",
+                           text=str(selected_egg))
+
+        # repeat
+        self.c.after(2, self.draw)
+
+
+
+        
+
+        
