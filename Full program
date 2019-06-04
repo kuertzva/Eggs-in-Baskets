@@ -156,16 +156,21 @@ class Basket:
         """
 
         # draw the eggs
-        for 
+        
 
         # draw the basket
         
-        pass
+        bbox = self.get_bbox()
+        w.create_rectangle(bbox, fill = "brown")
+        w.create_text((bbox[0] + bbox[2])/2,
+                      (bbox[1] + bbox[3]) / 2,
+                      text= self.name)
 
     
 
 class Carton:
-    def __init__(n_eggs, egg_height, egg_width, canvas_height, canvas_width):
+    def __init__(self, n_eggs, egg_height, egg_width, canvas_height,
+                 canvas_width):
         """
         The carton is the container of available eggs.
 
